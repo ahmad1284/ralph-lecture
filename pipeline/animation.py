@@ -6,6 +6,10 @@ import textwrap
 from .utils import ensure_dir
 
 
+# ---------------------------------------------------------------------------
+# Manim scene code generator
+# ---------------------------------------------------------------------------
+
 _MANIM_COLORS = {
     "BG": "#1C1C2E",
     "TEXT": "#FFFFFF",
@@ -35,7 +39,7 @@ def _manim_code_for_section(section: dict) -> str:
         latex = vc.get("latex", "")
         desc = vc.get("description", title)
         return _manim_proof(latex, desc, duration)
-    else:
+    else:  # diagram
         desc = vc.get("description", title)
         return _manim_diagram(desc, title, duration)
 
@@ -80,6 +84,7 @@ def _manim_equation(latex: str, duration: int) -> str:
 def _manim_graph(axes: dict, latex: str, duration: int) -> str:
     x_label = axes.get("x", "x").replace('"', '\\"')
     y_label = axes.get("y", "y").replace('"', '\\"')
+    fn_expr = "lambda x: x" if not latex else "lambda x: x"
     return textwrap.dedent(f'''\
         from manim import *
         config.background_color = "{_MANIM_COLORS["BG"]}"
@@ -96,7 +101,7 @@ def _manim_graph(axes: dict, latex: str, duration: int) -> str:
                 )
                 x_lab = ax.get_x_axis_label("{x_label}", color="{_MANIM_COLORS["TEXT"]}")
                 y_lab = ax.get_y_axis_label("{y_label}", color="{_MANIM_COLORS["TEXT"]}")
-                graph = ax.plot(lambda x: x, color="{_MANIM_COLORS["EQ"]}")
+                graph = ax.plot({fn_expr}, color="{_MANIM_COLORS["EQ"]}")
                 self.play(Create(ax), Write(x_lab), Write(y_lab), run_time=2)
                 self.play(Create(graph), run_time=min(3, {duration} * 0.4))
                 self.wait({max(duration - 6, 1)})
@@ -136,8 +141,37 @@ def _manim_proof(latex: str, desc: str, duration: int) -> str:
 
 
 def _manim_diagram(desc: str, title: str, duration: int) -> str:
-    safe_title = title.replace('"', '\\"')
-    safe_desc = desc[:120].replace('"', '\\"')
+    safe_title = title.replace('"', '\\"').replace("'", "\\'")
+    # When description looks like a shell command, render as a terminal card
+    if desc.strip().startswith("$"):
+        safe_cmd = desc.strip().replace("\\", "\\\\").replace('"', '\\"').replace("'", "\\'")
+        return textwrap.dedent(f'''\
+            from manim import *
+            config.background_color = "{_MANIM_COLORS["BG"]}"
+            config.pixel_height = 1080
+            config.pixel_width = 1920
+            config.frame_rate = 30
+
+            class SceneClass(Scene):
+                def construct(self):
+                    title = Text("{safe_title}", color="{_MANIM_COLORS["EMPHASIS"]}", font_size=52, weight=BOLD)
+                    title.to_edge(UP, buff=0.6)
+                    box = RoundedRectangle(
+                        corner_radius=0.15, width=14, height=2.2,
+                        fill_color="#1E1E2E", fill_opacity=1,
+                        stroke_color="{_MANIM_COLORS["EQ"]}", stroke_width=2,
+                    ).shift(DOWN * 0.2)
+                    prompt = Text("$ ", color="{_MANIM_COLORS["EQ"]}", font_size=40, font="Monospace")
+                    cmd_text = Text("{safe_cmd[2:]}", color="{_MANIM_COLORS["TEXT"]}", font_size=40, font="Monospace")
+                    cmd_line = VGroup(prompt, cmd_text).arrange(RIGHT, buff=0.05).move_to(box)
+                    self.play(FadeIn(title, shift=DOWN * 0.2), run_time=0.8)
+                    self.play(FadeIn(box), run_time=0.5)
+                    self.play(Write(prompt), run_time=0.4)
+                    self.play(AddTextLetterByLetter(cmd_text, time_per_char=0.06), run_time=min(3, {duration} * 0.3))
+                    self.wait({max(duration - 6, 2)})
+                    self.play(FadeOut(VGroup(title, box, cmd_line)), run_time=0.5)
+            ''')
+    safe_desc = desc[:120].replace('"', '\\"').replace("'", "\\'")
     return textwrap.dedent(f'''\
         from manim import *
         config.background_color = "{_MANIM_COLORS["BG"]}"
@@ -158,6 +192,10 @@ def _manim_diagram(desc: str, title: str, duration: int) -> str:
                 self.play(FadeOut(VGroup(title, desc, circle, arrow)), run_time=0.5)
         ''')
 
+
+# ---------------------------------------------------------------------------
+# Remotion renderer
+# ---------------------------------------------------------------------------
 
 def _render_remotion_section(section: dict, out_dir: str, remotion_src: str) -> str:
     idx = section["index"]
@@ -180,6 +218,10 @@ def _render_remotion_section(section: dict, out_dir: str, remotion_src: str) -> 
     return out_path
 
 
+# ---------------------------------------------------------------------------
+# Manim renderer
+# ---------------------------------------------------------------------------
+
 def _render_manim_section(section: dict, out_dir: str) -> str:
     idx = section["index"]
     tmp_dir = ensure_dir(os.path.join(out_dir, "tmp"))
@@ -200,12 +242,14 @@ def _render_manim_section(section: dict, out_dir: str) -> str:
     ]
     subprocess.run(cmd, check=True)
 
+    # Manim writes to media_dir/videos/<stem>/1080p30/<out_file>.mp4
     stem = f"scene_{idx:02d}"
     candidate = os.path.join(tmp_dir, "videos", stem, "1080p30", f"{out_file}.mp4")
     dest = os.path.join(scenes_dir, f"scene_{idx:02d}.mp4")
     if os.path.exists(candidate):
         os.rename(candidate, dest)
     else:
+        # Fallback: search for any mp4 in tmp_dir
         for root, _, files in os.walk(tmp_dir):
             for fname in files:
                 if fname.endswith(".mp4"):
@@ -216,6 +260,10 @@ def _render_manim_section(section: dict, out_dir: str) -> str:
         raise RuntimeError(f"Manim did not produce output for section {idx}")
     return dest
 
+
+# ---------------------------------------------------------------------------
+# Public entry point
+# ---------------------------------------------------------------------------
 
 def render_scenes(out_dir: str) -> None:
     script_path = os.path.join(out_dir, "script.json")
