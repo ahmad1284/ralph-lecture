@@ -111,10 +111,10 @@ def _manim_proof(latex: str, desc: str, duration: int) -> str:
     for i, line in enumerate(lines[:6]):
         safe_line = line.replace("\\", "\\\\").replace('"', '\\"')
         color = _MANIM_COLORS["RESULT"] if i == len(lines) - 1 else _MANIM_COLORS["EQ"]
-        steps.append(f'        step_{i} = MathTex(r"{safe_line}", color="{color}", font_size=54).shift(DOWN * {i * 1.1 - len(lines) * 0.5})')
+        steps.append(f'                step_{i} = MathTex(r"{safe_line}", color="{color}", font_size=54).shift(DOWN * {i * 1.1 - len(lines) * 0.5})')
 
     plays = "\n".join(
-        f'        self.play(FadeIn(step_{i}, shift=UP * 0.3), run_time={step_time:.1f})'
+        f'                self.play(FadeIn(step_{i}, shift=UP * 0.3), run_time={step_time:.1f})'
         for i in range(len(lines[:6]))
     )
     step_vars = ", ".join(f"step_{i}" for i in range(len(lines[:6])))
