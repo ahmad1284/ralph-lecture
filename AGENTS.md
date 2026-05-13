@@ -1,0 +1,94 @@
+# AGENTS.md
+
+## Environment Setup
+
+```bash
+# Python dependencies
+pip install manim edge-tts anthropic mutagen --break-system-packages
+
+# Remotion dependencies (run inside remotion-src/)
+cd remotion-src && npm install && cd ..
+```
+
+System dependencies required:
+- `ffmpeg` (in PATH)
+- `node` >= 18 (for Remotion)
+- `latex` / `texlive` (for Manim MathTex — only needed for academic topics)
+
+Environment variables:
+- `ANTHROPIC_API_KEY`
+
+## How to Run
+
+```bash
+python main.py "how to use grep"          # → Remotion renderer
+python main.py "Fourier Transform"        # → Manim renderer
+python main.py "how to use sed" --voice en-GB-SoniaNeural
+python main.py "Bayes Theorem" --random-voice
+```
+
+## How to Test Each Stage in Isolation
+
+```bash
+# 1. Script generation
+python -c "from pipeline.script import generate_script; generate_script('how to use grep', 'output/test')"
+# Check: output/test/script.json exists, renderer field is 'remotion'
+
+# 2. Animation (Remotion)
+python -c "from pipeline.animation import render_scenes; render_scenes('output/test')"
+# Check: output/test/scenes/scene_00.mp4 exists
+
+# 3. TTS
+python -c "from pipeline.tts import generate_audio; generate_audio('output/test', 'en-GB-SoniaNeural')"
+# Check: output/test/audio/section_00.mp3 and section_00_words.json exist
+
+# 4. Subtitles
+python -c "from pipeline.subtitles import generate_subtitles; generate_subtitles('output/test')"
+# Check: output/test/subtitles.srt exists and is non-empty
+
+# 5. Composition
+python -c "from pipeline.composition import compose; compose('output/test')"
+# Check: output/test/final.mp4 exists
+```
+
+## Validate Final Output
+
+```bash
+ffprobe -v quiet -print_format json -show_streams output/test/final.mp4
+# Expect: 2 streams — video (h264) + audio (aac)
+```
+
+## Project Structure
+
+```
+main.py
+pipeline/
+  script.py        — Claude API + topic classifier
+  animation.py     — dispatches to Remotion or Manim
+  tts.py           — edge-tts audio + word boundaries
+  subtitles.py     — SRT from word boundaries
+  composition.py   — ffmpeg merge, concat, subtitle burn
+  utils.py         — shared helpers
+remotion-src/
+  package.json
+  Root.tsx
+  compositions/
+  components/
+specs/
+output/
+```
+
+## Remotion Render Command
+```bash
+npx remotion render remotion-src/Root.tsx SceneComp \
+  --props='{"section": {...}}' \
+  --output output/{slug}/scenes/scene_00.mp4 \
+  --codec h264
+```
+
+## Manim Render Command
+```bash
+manim -qh --output_file scene_00 output/{slug}/tmp/scene_00.py SceneClass
+```
+
+## Known Issues (update as discovered)
