@@ -1,0 +1,43 @@
+# SPIR phase tracker — updated by loop.sh between iterations
+phase: specify   # specify | plan | implement | review
+
+stages:
+  - index: 0
+    name: utils
+    file: pipeline/utils.py
+    status: pending   # pending | in_progress | done
+
+  - index: 1
+    name: script-generation
+    file: pipeline/script.py
+    status: pending
+
+  - index: 2
+    name: tts
+    file: pipeline/tts.py
+    status: pending
+
+  - index: 3
+    name: subtitles
+    file: pipeline/subtitles.py
+    status: pending
+
+  - index: 4
+    name: animation
+    file: pipeline/animation.py
+    status: pending
+
+  - index: 5
+    name: composition
+    file: pipeline/composition.py
+    status: pending
+
+  - index: 6
+    name: cli-entry-point
+    file: main.py
+    status: pending
+
+  - index: 7
+    name: remotion-src
+    file: remotion-src/
+    status: pending
