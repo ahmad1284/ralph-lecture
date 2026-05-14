@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import os
 import sys
 import time
 
@@ -25,7 +26,10 @@ def _stage(name: str, fn, *args, **kwargs):
 
 def main():
     parser = argparse.ArgumentParser(description="Generate a narrated video lecture for any topic")
-    parser.add_argument("topic", help="Topic to lecture on")
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("topic", nargs="?", help="Topic to generate a script for (requires ANTHROPIC_API_KEY)")
+    group.add_argument("--from-script", metavar="DIR",
+                       help="Skip script generation and render an existing output dir containing script.json")
     parser.add_argument("--voice", default=None, help="edge-tts voice name")
     parser.add_argument("--random-voice", action="store_true", default=True,
                         help="Pick a random voice (default)")
@@ -34,11 +38,27 @@ def main():
     voice = args.voice if args.voice else random_voice()
     print(f"Voice: {voice}")
 
-    slug = slugify(args.topic)
-    out = output_dir("output", args.topic)
-    print(f"Output: {out}")
+    if args.from_script:
+        out = args.from_script.rstrip("/")
+        script_path = os.path.join(out, "script.json")
+        if not os.path.exists(script_path):
+            print(f"ERROR: no script.json found in {out}", file=sys.stderr)
+            sys.exit(1)
+        print(f"[script] using existing {script_path}")
+    else:
+        out = output_dir("output", args.topic)
+        print(f"Output: {out}")
+        script_path = os.path.join(out, "script.json")
+        if os.path.exists(script_path):
+            print(f"[script] found existing {script_path}, skipping generation")
+        else:
+            api_key = os.environ.get("ANTHROPIC_API_KEY")
+            if not api_key:
+                print("ERROR: ANTHROPIC_API_KEY not set. "
+                      "Either set the key or supply an existing script with --from-script.", file=sys.stderr)
+                sys.exit(1)
+            _stage("script", generate_script, args.topic, out)
 
-    _stage("script", generate_script, args.topic, out)
     _stage("animation", render_scenes, out)
     _stage("tts", generate_audio, out, voice)
     _stage("subtitles", generate_subtitles, out)
