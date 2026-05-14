@@ -1,12 +1,27 @@
 # Example: How to Use sed
 
-A fully rendered lecture video produced by the ralph-lecture pipeline.
+A fully rendered lecture produced by the ralph-lecture pipeline. The `script.json`
+is included so you can re-render the video locally without an API key.
 
-## Output
+## Re-render (no API key required)
+
+```bash
+python main.py --from-script examples/how-to-use-sed
+# output: output/how-to-use-sed/final.mp4
+```
+
+Or with Docker:
+
+```bash
+docker build -t ralph-lecture .
+docker run -v $(pwd)/output:/app/output \
+  ralph-lecture --from-script examples/how-to-use-sed
+```
+
+## Video properties
 
 | Property | Value |
-|----------|-------|
-| File | `final.mp4` |
+|----------|---------|
 | Duration | 163.6 seconds |
 | Resolution | 1920×1080 |
 | Video | h264 |
@@ -24,16 +39,15 @@ A fully rendered lecture video produced by the ralph-lecture pipeline.
 | 4 | Delete lines with d | terminal card | 40s |
 | 5 | Multiple commands with -e | terminal card | 45s |
 
-## How to regenerate
+## Pipeline notes
+
+- Renderer: **Manim** (no Chrome download required)
+- TTS: **espeak-ng** via pyttsx3 fallback (no outbound WebSocket required)
+- Word boundaries: estimated uniformly from audio duration
+
+## Regenerate from scratch (requires API key)
 
 ```bash
 export ANTHROPIC_API_KEY=sk-...
 python main.py "how to use sed"
-# output/how-to-use-sed/final.mp4
 ```
-
-## Pipeline notes
-
-- Renderer: **Manim** (Remotion requires Chrome Headless Shell download, blocked in sandboxed environments)
-- TTS: **espeak-ng** via pyttsx3 fallback (edge-tts requires outbound WebSocket to Microsoft; blocked in sandboxed environments)
-- Word boundaries: estimated uniformly from audio duration

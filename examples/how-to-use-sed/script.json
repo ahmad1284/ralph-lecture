@@ -1,0 +1,79 @@
+{
+  "topic": "how to use sed",
+  "renderer": "manim",
+  "total_sections": 6,
+  "sections": [
+    {
+      "index": 0,
+      "title": "What is sed?",
+      "narration": "sed stands for stream editor. Think of it as a find-and-replace tool for the terminal — but one that never opens a file in a text editor. Instead, it reads your file line by line, applies transformations you specify, and prints the result. It is non-destructive by default: your original file stays untouched unless you explicitly ask it to be changed. That design choice makes sed safe to experiment with, and that is exactly what we are going to do.",
+      "visual_type": "text",
+      "visual_content": {
+        "latex": "",
+        "description": "sed — stream editor: reads input line by line, applies rules, prints output",
+        "axes": {}
+      },
+      "estimated_duration_seconds": 40
+    },
+    {
+      "index": 1,
+      "title": "Basic substitution: s/old/new/",
+      "narration": "The most common sed command is substitution. The syntax is the letter s, followed by three slashes, with the pattern to find between the first two and the replacement between the second and third. Here we replace the word hello with world. sed finds the first match on each line and replaces it. Notice how the second line, which says hello hello twice, only has its first occurrence changed. That is the default behaviour — one replacement per line.",
+      "visual_type": "diagram",
+      "visual_content": {
+        "latex": "",
+        "description": "$ sed 's/hello/world/' greet.txt",
+        "axes": {}
+      },
+      "estimated_duration_seconds": 45
+    },
+    {
+      "index": 2,
+      "title": "Global flag: s/old/new/g",
+      "narration": "To replace every occurrence on a line — not just the first — add a g at the end. That stands for global. Now when a line contains hello hello, both copies become world world. This is one of the most common flags you will use in practice. Whenever you are doing a bulk search and replace across a file, the g flag is almost always what you want.",
+      "visual_type": "diagram",
+      "visual_content": {
+        "latex": "",
+        "description": "$ sed 's/hello/world/g' greet.txt",
+        "axes": {}
+      },
+      "estimated_duration_seconds": 40
+    },
+    {
+      "index": 3,
+      "title": "Edit in place with -i",
+      "narration": "So far we have only printed results to the terminal. To actually write the changes back to the file, use the -i flag, which stands for in-place. On Linux you just write -i. On macOS you need to pass an empty string as the backup suffix: -i with empty quotes. Once you run this, the file on disk is updated. There is no undo, so many people use -i.bak first, which saves a backup with a .bak extension before overwriting.",
+      "visual_type": "diagram",
+      "visual_content": {
+        "latex": "",
+        "description": "$ sed -i 's/hello/world/g' greet.txt",
+        "axes": {}
+      },
+      "estimated_duration_seconds": 45
+    },
+    {
+      "index": 4,
+      "title": "Delete lines with d",
+      "narration": "Substitution is just one sed command. Another is d, for delete. You combine it with an address — either a line number or a pattern — to tell sed which lines to remove. Here we delete every line that contains the word error. The address is a pattern wrapped in slashes. sed tests each line against it; if it matches, the line is dropped from the output entirely. This is extremely useful for filtering log files.",
+      "visual_type": "diagram",
+      "visual_content": {
+        "latex": "",
+        "description": "$ sed '/error/d' app.log",
+        "axes": {}
+      },
+      "estimated_duration_seconds": 40
+    },
+    {
+      "index": 5,
+      "title": "Multiple commands with -e",
+      "narration": "What if you need to apply more than one transformation in a single pass? Use the -e flag before each expression. sed will apply them in order on every line. Here we first replace foo with bar, then delete any line containing baz. You can chain as many -e expressions as you need. This is much faster than piping through multiple sed processes, since the file is only read once. That is the stream editor mindset: one pass, multiple rules.",
+      "visual_type": "diagram",
+      "visual_content": {
+        "latex": "",
+        "description": "$ sed -e 's/foo/bar/g' -e '/baz/d' data.txt",
+        "axes": {}
+      },
+      "estimated_duration_seconds": 45
+    }
+  ]
+}
