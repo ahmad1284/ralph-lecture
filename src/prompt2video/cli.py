@@ -75,11 +75,17 @@ def main(
     console.print(f"Voice: [cyan]{chosen_voice}[/]\n")
 
     if from_script is not None:
-        out = str(from_script).rstrip("/")
-        if not (Path(out) / "script.json").exists():
-            console.print(f"[red]Error:[/] no script.json found in {out}")
+        src = Path(str(from_script).rstrip("/"))
+        if not (src / "script.json").exists():
+            console.print(f"[red]Error:[/] no script.json found in {src}")
             raise typer.Exit(code=1)
-        console.print(f"[dim]Using existing {out}/script.json[/]\n")
+        import json, shutil
+        topic_name = json.loads((src / "script.json").read_text()).get("topic", src.name)
+        out = output_dir("output", topic_name)
+        Path(out).mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src / "script.json", Path(out) / "script.json")
+        console.print(f"Output: [dim]{out}/[/]")
+        console.print(f"[dim]Using script from {src}/[/]\n")
     else:
         out = output_dir("output", topic)
         console.print(f"Output: [dim]{out}/[/]\n")
