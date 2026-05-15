@@ -4,3 +4,11 @@ __pycache__/
 .venv/
 node_modules/
 prompt2video.egg-info/
+examples/*/audio/
+examples/*/scenes/
+examples/*/tmp/
+examples/*/subtitles.srt
+examples/*/combined.mp4
+examples/*/final.mp4
+*.ipynb_checkpoints/
+.ipynb_checkpoints/
