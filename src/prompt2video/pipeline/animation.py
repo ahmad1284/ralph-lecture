@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import sys
 import textwrap
 
 from .utils import ensure_dir, find_project_root
@@ -194,7 +195,7 @@ def _render_manim_section(section: dict, out_dir: str) -> str:
         f.write(_manim_code_for_section(section))
 
     subprocess.run(
-        ["manim", "-qh", "--output_file", out_file, "--media_dir", tmp_dir, py_path, "SceneClass"],
+        [sys.executable, "-m", "manim", "-qh", "--output_file", out_file, "--media_dir", tmp_dir, py_path, "SceneClass"],
         check=True,
     )
 
