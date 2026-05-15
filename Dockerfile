@@ -5,18 +5,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     espeak-ng \
     libespeak-ng1 \
-    libcairo2-dev \
-    libpango1.0-dev \
-    pkg-config \
-    python3-dev \
-    build-essential \
     git \
     nodejs \
     npm \
-    texlive-latex-base \
-    texlive-fonts-recommended \
-    texlive-latex-extra \
-    dvisvgm \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

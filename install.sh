@@ -11,26 +11,20 @@ install_sys_deps() {
         sudo apt-get update -qq
         sudo apt-get install -y --no-install-recommends \
             ffmpeg espeak-ng libespeak-ng1 \
-            libcairo2-dev libpango1.0-dev \
-            nodejs npm \
-            texlive-latex-base texlive-fonts-recommended texlive-latex-extra dvisvgm
+            nodejs npm
     elif command -v dnf &>/dev/null; then
         echo "→ dnf: installing system deps..."
         sudo dnf install -y \
             ffmpeg espeak-ng espeak-ng-devel \
-            cairo-devel pango-devel \
-            nodejs npm \
-            texlive-latex texlive-collection-latexextra
+            nodejs npm
     elif command -v pacman &>/dev/null; then
         echo "→ pacman: installing system deps..."
         sudo pacman -Sy --noconfirm \
             ffmpeg espeak-ng \
-            cairo pango \
-            nodejs npm \
-            texlive-core texlive-latexextra
+            nodejs npm
     else
         echo "⚠  Unknown package manager. Install manually:"
-        echo "   ffmpeg, espeak-ng, libcairo2-dev, libpango1.0-dev, nodejs, npm, texlive-latex-extra"
+        echo "   ffmpeg, espeak-ng, nodejs, npm"
         echo "   Then re-run this script."
         exit 1
     fi

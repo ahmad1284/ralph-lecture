@@ -7,19 +7,11 @@ import anthropic
 
 from .utils import ensure_dir
 
-_CLI_KEYWORDS = {
-    "grep", "sed", "awk", "find", "curl", "wget", "git", "docker",
-    "ssh", "rsync", "tar", "chmod", "chown", "ps", "kill", "top",
-    "htop", "netstat", "lsof", "strace", "bash", "zsh", "pipe",
-    "regex", "cron", "systemd", "nginx", "vim", "tmux", "make",
-    "jq", "xargs", "sort", "uniq", "cut", "tr", "wc",
-}
-
 _SYSTEM_PROMPT = """\
 You are an MIT lecturer. Generate a narrated video lecture script as JSON.
 
 Rules:
-- Build intuition before formalism (\"think of it like...\" before the equation)
+- Build intuition before formalism ("think of it like...") before technical detail
 - Explain WHY before HOW
 - Use concrete examples
 - Precise language, no filler
@@ -30,40 +22,29 @@ Rules:
 
 You must output ONLY valid JSON matching this exact schema:
 {
-  \"topic\": \"<topic string>\",
-  \"renderer\": \"remotion\" | \"manim\",
-  \"total_sections\": <int>,
-  \"sections\": [
+  "topic": "<topic string>",
+  "total_sections": <int>,
+  "sections": [
     {
-      \"index\": <int>,
-      \"title\": \"<string>\",
-      \"narration\": \"<spoken text>\",
-      \"visual_type\": \"text\" | \"equation\" | \"graph\" | \"diagram\" | \"proof\",
-      \"visual_content\": {
-        \"latex\": \"<LaTeX string or empty>\",
-        \"description\": \"<human-readable description>\",
-        \"axes\": {\"x\": \"<label>\", \"y\": \"<label>\"}
+      "index": <int>,
+      "title": "<string>",
+      "narration": "<spoken text>",
+      "visual_type": "text" | "code" | "diagram",
+      "visual_content": {
+        "code": "<code string or empty>",
+        "language": "<language or empty>",
+        "description": "<human-readable description>"
       },
-      \"estimated_duration_seconds\": <int>
+      "estimated_duration_seconds": <int>
     }
   ]
 }
-
-Set renderer to \"remotion\" for CLI tools, shell commands, developer workflows,
-and programming concepts best shown with code.
-Set renderer to \"manim\" for mathematics, physics, formal CS, signal processing,
-and anything requiring LaTeX equations as the primary visual.
 """
-
-
-def _classify_renderer(topic: str) -> str:
-    words = set(topic.lower().split())
-    return "remotion" if words & _CLI_KEYWORDS else "manim"
 
 
 def _validate(data: dict) -> list[str]:
     errors = []
-    for key in ("topic", "renderer", "total_sections", "sections"):
+    for key in ("topic", "total_sections", "sections"):
         if key not in data:
             errors.append(f"missing top-level key: {key}")
     if "sections" in data:
@@ -71,8 +52,6 @@ def _validate(data: dict) -> list[str]:
             for k in ("index", "title", "narration", "visual_type", "visual_content", "estimated_duration_seconds"):
                 if k not in sec:
                     errors.append(f"section {i} missing key: {k}")
-    if "renderer" in data and data["renderer"] not in ("remotion", "manim"):
-        errors.append(f"invalid renderer: {data['renderer']}")
     return errors
 
 
@@ -112,9 +91,6 @@ def generate_script(topic: str, out_dir: str) -> dict:
         errors = _validate(data)
         if errors:
             raise ValueError(f"Script validation failed after retry: {errors}")
-
-    if data.get("renderer") not in ("remotion", "manim"):
-        data["renderer"] = _classify_renderer(topic)
 
     out_path = os.path.join(out_dir, "script.json")
     with open(out_path, "w") as f:
