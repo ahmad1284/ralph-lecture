@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import os
 
@@ -17,7 +19,7 @@ _SYSTEM_PROMPT = """\
 You are an MIT lecturer. Generate a narrated video lecture script as JSON.
 
 Rules:
-- Build intuition before formalism ("think of it like..." before the equation)
+- Build intuition before formalism (\"think of it like...\" before the equation)
 - Explain WHY before HOW
 - Use concrete examples
 - Precise language, no filler
@@ -28,37 +30,35 @@ Rules:
 
 You must output ONLY valid JSON matching this exact schema:
 {
-  "topic": "<topic string>",
-  "renderer": "remotion" | "manim",
-  "total_sections": <int>,
-  "sections": [
+  \"topic\": \"<topic string>\",
+  \"renderer\": \"remotion\" | \"manim\",
+  \"total_sections\": <int>,
+  \"sections\": [
     {
-      "index": <int>,
-      "title": "<string>",
-      "narration": "<spoken text>",
-      "visual_type": "text" | "equation" | "graph" | "diagram" | "proof",
-      "visual_content": {
-        "latex": "<LaTeX string or empty>",
-        "description": "<human-readable description>",
-        "axes": {"x": "<label>", "y": "<label>"}
+      \"index\": <int>,
+      \"title\": \"<string>\",
+      \"narration\": \"<spoken text>\",
+      \"visual_type\": \"text\" | \"equation\" | \"graph\" | \"diagram\" | \"proof\",
+      \"visual_content\": {
+        \"latex\": \"<LaTeX string or empty>\",
+        \"description\": \"<human-readable description>\",
+        \"axes\": {\"x\": \"<label>\", \"y\": \"<label>\"}
       },
-      "estimated_duration_seconds": <int>
+      \"estimated_duration_seconds\": <int>
     }
   ]
 }
 
-Set renderer to "remotion" for CLI tools, shell commands, developer workflows,
+Set renderer to \"remotion\" for CLI tools, shell commands, developer workflows,
 and programming concepts best shown with code.
-Set renderer to "manim" for mathematics, physics, formal CS, signal processing,
+Set renderer to \"manim\" for mathematics, physics, formal CS, signal processing,
 and anything requiring LaTeX equations as the primary visual.
 """
 
 
 def _classify_renderer(topic: str) -> str:
     words = set(topic.lower().split())
-    if words & _CLI_KEYWORDS:
-        return "remotion"
-    return "manim"
+    return "remotion" if words & _CLI_KEYWORDS else "manim"
 
 
 def _validate(data: dict) -> list[str]:
@@ -76,6 +76,14 @@ def _validate(data: dict) -> list[str]:
     return errors
 
 
+def _strip_fence(raw: str) -> str:
+    if raw.startswith("```"):
+        raw = raw.split("```")[1]
+        if raw.startswith("json"):
+            raw = raw[4:]
+    return raw.strip()
+
+
 def generate_script(topic: str, out_dir: str) -> dict:
     ensure_dir(out_dir)
     client = anthropic.Anthropic()
@@ -83,7 +91,7 @@ def generate_script(topic: str, out_dir: str) -> dict:
     def _call(extra: str = "") -> str:
         user_msg = f"Topic: {topic}"
         if extra:
-            user_msg += f"\n\nPrevious attempt failed validation:\n{extra}\nFix the JSON and return only valid JSON."
+            user_msg += f"\n\nPrevious attempt failed:\n{extra}\nFix and return only valid JSON."
         msg = client.messages.create(
             model="claude-sonnet-4-5",
             max_tokens=4096,
@@ -92,34 +100,15 @@ def generate_script(topic: str, out_dir: str) -> dict:
         )
         return msg.content[0].text.strip()
 
-    raw = _call()
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
-        raw = raw.strip()
-
+    raw = _strip_fence(_call())
     try:
         data = json.loads(raw)
-    except json.JSONDecodeError as e:
-        raw2 = _call(f"JSON parse error: {e}\nRaw output was:\n{raw}")
-        if raw2.startswith("```"):
-            raw2 = raw2.split("```")[1]
-            if raw2.startswith("json"):
-                raw2 = raw2[4:]
-            raw2 = raw2.strip()
-        data = json.loads(raw2)
+    except json.JSONDecodeError as exc:
+        data = json.loads(_strip_fence(_call(f"JSON parse error: {exc}\nRaw:\n{raw}")))
 
     errors = _validate(data)
     if errors:
-        error_str = "\n".join(errors)
-        raw2 = _call(f"Validation errors:\n{error_str}")
-        if raw2.startswith("```"):
-            raw2 = raw2.split("```")[1]
-            if raw2.startswith("json"):
-                raw2 = raw2[4:]
-            raw2 = raw2.strip()
-        data = json.loads(raw2)
+        data = json.loads(_strip_fence(_call(f"Validation errors:\n" + "\n".join(errors))))
         errors = _validate(data)
         if errors:
             raise ValueError(f"Script validation failed after retry: {errors}")

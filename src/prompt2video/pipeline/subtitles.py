@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import os
 import subprocess
@@ -12,35 +14,25 @@ def _audio_duration_seconds(mp3_path: str) -> float:
             ["ffprobe", "-v", "quiet", "-print_format", "json", "-show_streams", mp3_path],
             capture_output=True, text=True, check=True,
         )
-        streams = json.loads(result.stdout).get("streams", [])
-        for s in streams:
+        for s in json.loads(result.stdout).get("streams", []):
             if "duration" in s:
                 return float(s["duration"])
         raise RuntimeError(f"Cannot determine duration of {mp3_path}")
 
 
 def _ms_to_srt(ms: int) -> str:
-    h = ms // 3_600_000
-    ms %= 3_600_000
-    m = ms // 60_000
-    ms %= 60_000
-    s = ms // 1000
-    ms %= 1000
+    h, ms = divmod(ms, 3_600_000)
+    m, ms = divmod(ms, 60_000)
+    s, ms = divmod(ms, 1000)
     return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
 
 
 def _chunk_words(words: list[dict], max_words: int = 8) -> list[list[dict]]:
-    chunks = []
-    i = 0
-    while i < len(words):
-        chunks.append(words[i:i + max_words])
-        i += max_words
-    return chunks
+    return [words[i:i + max_words] for i in range(0, len(words), max_words)]
 
 
 def generate_subtitles(out_dir: str) -> None:
-    script_path = os.path.join(out_dir, "script.json")
-    with open(script_path) as f:
+    with open(os.path.join(out_dir, "script.json")) as f:
         script = json.load(f)
 
     audio_dir = os.path.join(out_dir, "audio")
@@ -48,7 +40,7 @@ def generate_subtitles(out_dir: str) -> None:
 
     subtitle_index = 1
     cumulative_ms = 0
-    lines = []
+    lines: list[dict] = []
 
     for section in script["sections"]:
         idx = section["index"]
@@ -63,14 +55,14 @@ def generate_subtitles(out_dir: str) -> None:
         for chunk in _chunk_words(words):
             start_ms = cumulative_ms + chunk[0]["start_ms"]
             end_ms = cumulative_ms + chunk[-1]["end_ms"]
-
-            if lines:
-                prev_end = lines[-1]["end_ms"]
-                if start_ms < prev_end + 50:
-                    start_ms = prev_end + 50
-
-            text = " ".join(w["word"] for w in chunk)
-            lines.append({"index": subtitle_index, "start_ms": start_ms, "end_ms": end_ms, "text": text})
+            if lines and start_ms < lines[-1]["end_ms"] + 50:
+                start_ms = lines[-1]["end_ms"] + 50
+            lines.append({
+                "index": subtitle_index,
+                "start_ms": start_ms,
+                "end_ms": end_ms,
+                "text": " ".join(w["word"] for w in chunk),
+            })
             subtitle_index += 1
 
         cumulative_ms += int(duration_s * 1000)

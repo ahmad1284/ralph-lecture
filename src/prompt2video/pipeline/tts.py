@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import asyncio
 import json
 import os
+import random
 import ssl
 import subprocess
 import tempfile
@@ -8,13 +11,14 @@ import tempfile
 import edge_tts
 import edge_tts.communicate as _et_comm
 
-# Sandbox environments use a self-signed MITM cert — disable verification.
+from .utils import ensure_dir
+
+# Some sandbox environments use a self-signed MITM cert — disable verification so
+# edge-tts can still attempt a connection before falling back to espeak-ng.
 _no_verify_ctx = ssl.create_default_context()
 _no_verify_ctx.check_hostname = False
 _no_verify_ctx.verify_mode = ssl.CERT_NONE
 _et_comm._SSL_CTX = _no_verify_ctx
-
-from .utils import ensure_dir
 
 VOICES = [
     "en-US-AriaNeural",
@@ -31,14 +35,13 @@ VOICES = [
 
 
 def random_voice() -> str:
-    import random
     return random.choice(VOICES)
 
 
 async def _synthesise_edge(text: str, voice: str, mp3_path: str, words_path: str) -> None:
     communicate = edge_tts.Communicate(text, voice)
-    words = []
-    audio_chunks = []
+    words: list[dict] = []
+    audio_chunks: list[bytes] = []
 
     async for event in communicate.stream():
         if event["type"] == "audio":
@@ -53,17 +56,15 @@ async def _synthesise_edge(text: str, voice: str, mp3_path: str, words_path: str
     with open(mp3_path, "wb") as f:
         for chunk in audio_chunks:
             f.write(chunk)
-
     with open(words_path, "w") as f:
         json.dump(words, f, indent=2)
 
 
 def _synthesise_local(text: str, mp3_path: str, words_path: str) -> None:
-    """Fallback: espeak-ng → wav → mp3, word boundaries estimated from duration."""
+    """Fallback: espeak-ng → wav → mp3 via pyttsx3; boundaries estimated from duration."""
     import pyttsx3
 
     engine = pyttsx3.init()
-    # Use English RP voice if available
     for v in engine.getProperty("voices"):
         if "en-gb-x-rp" in v.id.lower() or "rp" in (v.name or "").lower():
             engine.setProperty("voice", v.id)
@@ -72,7 +73,6 @@ def _synthesise_local(text: str, mp3_path: str, words_path: str) -> None:
 
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
         wav_path = tmp.name
-
     engine.save_to_file(text, wav_path)
     engine.runAndWait()
 
@@ -82,33 +82,28 @@ def _synthesise_local(text: str, mp3_path: str, words_path: str) -> None:
     )
     os.unlink(wav_path)
 
-    # Estimate word boundaries uniformly from audio duration
     result = subprocess.run(
         ["ffprobe", "-v", "quiet", "-print_format", "json", "-show_streams", mp3_path],
         capture_output=True, text=True, check=True,
     )
-    streams = json.loads(result.stdout).get("streams", [])
     duration_ms = 0
-    for s in streams:
+    for s in json.loads(result.stdout).get("streams", []):
         if "duration" in s:
             duration_ms = int(float(s["duration"]) * 1000)
             break
 
     tokens = text.split()
     n = len(tokens)
-    words = []
-    for i, word in enumerate(tokens):
-        start_ms = int(duration_ms * i / n)
-        end_ms = int(duration_ms * (i + 1) / n)
-        words.append({"word": word, "start_ms": start_ms, "end_ms": end_ms})
-
+    words = [
+        {"word": w, "start_ms": int(duration_ms * i / n), "end_ms": int(duration_ms * (i + 1) / n)}
+        for i, w in enumerate(tokens)
+    ]
     with open(words_path, "w") as f:
         json.dump(words, f, indent=2)
 
 
 def generate_audio(out_dir: str, voice: str) -> None:
-    script_path = os.path.join(out_dir, "script.json")
-    with open(script_path) as f:
+    with open(os.path.join(out_dir, "script.json")) as f:
         script = json.load(f)
 
     audio_dir = ensure_dir(os.path.join(out_dir, "audio"))
@@ -121,7 +116,7 @@ def generate_audio(out_dir: str, voice: str) -> None:
         try:
             asyncio.run(_synthesise_edge(section["narration"], voice, mp3_path, words_path))
         except Exception:
-            print(f"  edge-tts unavailable for section {idx}, using local espeak fallback")
+            print(f"  edge-tts unavailable for section {idx}, falling back to espeak-ng")
             _synthesise_local(section["narration"], mp3_path, words_path)
 
         if not os.path.exists(mp3_path) or os.path.getsize(mp3_path) == 0:
