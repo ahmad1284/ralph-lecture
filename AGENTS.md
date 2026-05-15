@@ -19,14 +19,14 @@ pip install -r requirements.txt
 ### Option C — Docker (no local deps needed)
 
 ```bash
-docker build -t ralph-lecture .
+docker build -t prompt2video .
 docker run -e ANTHROPIC_API_KEY=sk-... \
   -v $(pwd)/output:/app/output \
-  ralph-lecture "how to use grep"
+  prompt2video "how to use grep"
 
 # Re-render the bundled example without an API key:
 docker run -v $(pwd)/output:/app/output \
-  ralph-lecture --from-script examples/how-to-use-sed
+  prompt2video --from-script examples/how-to-use-sed
 ```
 
 ### System dependencies (non-Docker)
@@ -42,19 +42,26 @@ docker run -v $(pwd)/output:/app/output \
 |---|---|---|
 | `ANTHROPIC_API_KEY` | Only for new topics | Claude API script generation |
 
+## Install (after setting up the venv)
+
+```bash
+uv pip install -e .
+# or: pip install -e .
+```
+
 ## Running the pipeline
 
 ```bash
 # Generate script + render (requires ANTHROPIC_API_KEY)
-python main.py "how to use grep"
-python main.py "Fourier Transform"
-python main.py "how to use sed" --voice en-GB-SoniaNeural
+prompt2video "how to use grep"
+prompt2video "Fourier Transform"
+prompt2video "how to use sed" --voice en-GB-SoniaNeural
 
 # Re-render the bundled example without an API key
-python main.py --from-script examples/how-to-use-sed
+prompt2video --from-script examples/how-to-use-sed
 
 # script.json already present → script stage is automatically skipped
-python main.py "how to use sed"   # skips Claude if output/how-to-use-sed/script.json exists
+prompt2video "how to use sed"   # skips Claude if output/how-to-use-sed/script.json exists
 ```
 
 ## Build Loop
@@ -92,7 +99,7 @@ python -c "from pipeline.composition import compose; compose('output/test')"
 ## Acceptance Test
 
 ```bash
-python main.py "how to use grep"
+prompt2video "how to use grep"
 ffprobe -v quiet -print_format json -show_streams output/how-to-use-grep/final.mp4
 # Expect: 2 streams — video (h264) + audio (aac)
 ```
@@ -101,6 +108,7 @@ ffprobe -v quiet -print_format json -show_streams output/how-to-use-grep/final.m
 
 ```
 main.py
+pyproject.toml
 requirements.txt
 Dockerfile
 pipeline/

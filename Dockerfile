@@ -16,8 +16,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY pyproject.toml requirements.txt ./
+RUN pip install --no-cache-dir -e .
 
 # Remotion dependencies
 COPY remotion-src/package.json remotion-src/package-lock.json remotion-src/
@@ -28,6 +28,6 @@ COPY . .
 ENV ANTHROPIC_API_KEY=""
 
 # Usage:
-#   docker run -e ANTHROPIC_API_KEY=sk-... -v $(pwd)/output:/app/output ralph-lecture "how to use sed"
-#   docker run -v $(pwd)/output:/app/output ralph-lecture --from-script output/how-to-use-sed
-ENTRYPOINT ["python", "main.py"]
+#   docker run -e ANTHROPIC_API_KEY=sk-... -v $(pwd)/output:/app/output prompt2video "how to use sed"
+#   docker run -v $(pwd)/output:/app/output prompt2video --from-script examples/how-to-use-sed
+ENTRYPOINT ["prompt2video"]

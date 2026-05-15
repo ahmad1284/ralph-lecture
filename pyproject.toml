@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "prompt2video"
+version = "0.1.0"
+description = "Turn any topic into a narrated animated video lecture"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+dependencies = [
+    "anthropic>=0.25.0",
+    "edge-tts>=6.1.9",
+    "mutagen>=1.47.0",
+    "pyttsx3>=2.90",
+    "manim>=0.18.0",
+]
+
+[project.scripts]
+prompt2video = "main:main"
+
+[project.urls]
+Repository = "https://github.com/ahmad1284/ralph-lecture"
+
+[tool.setuptools]
+py-modules = ["main"]
+packages = ["pipeline"]

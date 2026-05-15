@@ -1,4 +1,6 @@
-__pycache__/
-*.pyc
 output/
+__pycache__/
+*.py[cod]
+.venv/
 node_modules/
+prompt2video.egg-info/
