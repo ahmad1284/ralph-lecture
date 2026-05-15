@@ -13,6 +13,46 @@ A fully rendered MP4 with:
 - Natural-sounding voice via edge-tts
 - Burned-in subtitles
 
+## Docker
+
+The Docker image bundles everything — Python, ffmpeg, espeak-ng, Node, LaTeX, and all Python dependencies. No local setup needed.
+
+**Build:**
+
+```bash
+docker build -t prompt2video .
+```
+
+**Run — generate a new lecture** (requires API key):
+
+```bash
+docker run --rm \
+  -e ANTHROPIC_API_KEY=sk-... \
+  -v "$(pwd)/output:/app/output" \
+  prompt2video "how to use grep"
+# → output/how-to-use-grep/final.mp4
+```
+
+**Run — re-render the bundled example** (no API key):
+
+```bash
+docker run --rm \
+  -v "$(pwd)/output:/app/output" \
+  prompt2video --from-script examples/how-to-use-sed
+# → output/how-to-use-sed/final.mp4
+```
+
+**Use a specific voice:**
+
+```bash
+docker run --rm \
+  -e ANTHROPIC_API_KEY=sk-... \
+  -v "$(pwd)/output:/app/output" \
+  prompt2video --voice en-GB-SoniaNeural "Fourier Transform"
+```
+
+The `-v $(pwd)/output:/app/output` flag mounts a local `output/` folder so the final MP4 lands on your machine.
+
 ## Install
 
 ```bash
@@ -41,7 +81,7 @@ uv pip install -e .
 | `ffmpeg` | Audio/video composition |
 | `espeak-ng` | TTS fallback (offline) |
 | `node` >= 18 | Remotion renderer |
-| `texlive-full` | Manim MathTex (math topics only) |
+| `texlive-latex-extra` | Manim MathTex (math topics only) |
 
 ## Usage
 
