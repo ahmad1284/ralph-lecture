@@ -55,45 +55,35 @@ The `-v $(pwd)/output:/app/output` flag mounts a local `output/` folder so the f
 
 ## Install
 
-### `uv tool install` — recommended (like `cargo install`)
-
 ```bash
 git clone https://github.com/ahmad1284/ralph-lecture
 cd ralph-lecture
-uv tool install .
+./install.sh
 ```
 
-That's it. `prompt2video` lands on your PATH in an isolated environment — no venv to activate, no dependency conflicts. Upgrade later with `uv tool upgrade prompt2video`.
+`install.sh` handles everything in one shot:
+1. Installs system dependencies (ffmpeg, espeak-ng, Node, LaTeX) via apt / dnf / pacman
+2. Installs [uv](https://docs.astral.sh/uv/) if not already present
+3. Runs `uv tool install .` — drops `prompt2video` on your PATH in an isolated env
 
-> **Install uv** (if you don't have it): `curl -LsSf https://astral.sh/uv/install.sh | sh`
+After that it's just `prompt2video "your topic"`. No venv to activate.
 
-### `pipx` — alternative
+### Manual steps (if you prefer)
+
+**System deps (Debian/Ubuntu):**
 
 ```bash
-git clone https://github.com/ahmad1284/ralph-lecture
-cd ralph-lecture
-pipx install .
+sudo apt-get install -y ffmpeg espeak-ng libcairo2-dev libpango1.0-dev \
+    nodejs npm texlive-latex-base texlive-fonts-recommended texlive-latex-extra dvisvgm
 ```
 
-Same idea as `uv tool install`: isolated env, binary on PATH.
-
-### From source (development)
+**Python CLI:**
 
 ```bash
-git clone https://github.com/ahmad1284/ralph-lecture
-cd ralph-lecture
-uv venv .venv && source .venv/bin/activate
-uv pip install -e .
+uv tool install .        # isolated env, binary on PATH
+# or
+pipx install .           # same idea, pipx flavour
 ```
-
-## System dependencies
-
-| Dependency | Purpose |
-|---|---|
-| `ffmpeg` | Audio/video composition |
-| `espeak-ng` | TTS fallback (offline) |
-| `node` >= 18 | Remotion renderer |
-| `texlive-latex-extra` | Manim MathTex (math topics only) |
 
 ## Usage
 
