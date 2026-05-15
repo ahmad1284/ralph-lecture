@@ -55,21 +55,33 @@ The `-v $(pwd)/output:/app/output` flag mounts a local `output/` folder so the f
 
 ## Install
 
-```bash
-pip install prompt2video
-```
-
-Or from source:
+### `uv tool install` — recommended (like `cargo install`)
 
 ```bash
 git clone https://github.com/ahmad1284/ralph-lecture
 cd ralph-lecture
-pip install -e .
+uv tool install .
 ```
 
-With [uv](https://docs.astral.sh/uv/) (recommended):
+That's it. `prompt2video` lands on your PATH in an isolated environment — no venv to activate, no dependency conflicts. Upgrade later with `uv tool upgrade prompt2video`.
+
+> **Install uv** (if you don't have it): `curl -LsSf https://astral.sh/uv/install.sh | sh`
+
+### `pipx` — alternative
 
 ```bash
+git clone https://github.com/ahmad1284/ralph-lecture
+cd ralph-lecture
+pipx install .
+```
+
+Same idea as `uv tool install`: isolated env, binary on PATH.
+
+### From source (development)
+
+```bash
+git clone https://github.com/ahmad1284/ralph-lecture
+cd ralph-lecture
 uv venv .venv && source .venv/bin/activate
 uv pip install -e .
 ```
